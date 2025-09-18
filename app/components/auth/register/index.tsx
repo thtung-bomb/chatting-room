@@ -1,10 +1,14 @@
 // pages/RegisterPage.tsx
+import { auth } from "config/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { setDoc, doc, collection } from "firebase/firestore"
+import { saveUserToDB } from "util/db";
 
 
 export default function RegisterPage() {
@@ -24,7 +28,15 @@ export default function RegisterPage() {
 		setIsLoading(true);
 		try {
 			// await register(email, password);
-			navigate("/chat"); // redirect sau khi đăng ký
+			const user = await createUserWithEmailAndPassword(auth, email, password);
+			console.log('====================================');
+			console.log('User registered successfully', user);
+			console.log('====================================');
+			if (user) {
+				alert("Đăng ký thành công!");
+				saveUserToDB(user.user);
+				navigate("/chat"); // redirect sau khi đăng ký
+			}
 		} catch (err: any) {
 			alert("Đăng ký thất bại: " + err.message);
 		} finally {
@@ -40,6 +52,8 @@ export default function RegisterPage() {
 					<p className="text-muted-foreground">Please enter your information to access your account</p>
 				</div>
 				<form onSubmit={handleRegister} className="space-y-4">
+					<Label htmlFor="displayName">Your Name</Label>
+					<Input type="text" id="displayName" placeholder="Your name" />
 					<Label htmlFor="email">Email</Label>
 					<Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
 					<Label htmlFor="password">Password</Label>

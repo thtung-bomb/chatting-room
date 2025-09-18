@@ -1,18 +1,50 @@
-# Welcome to React Router!
+# Dudaji Chat App
 
-A modern, production-ready template for building full-stack React applications using React Router.
+A modern, real-time chat application built with React Router, Firebase, and Redux Toolkit.
 
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
 
 ## Features
 
-- 🚀 Server-side rendering
+- 🚀 Server-side rendering with React Router
 - ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
+- � Real-time chat messaging with Firebase
+- 😀 Emoji picker integration
+- � User authentication with Firebase Auth
+- 🗑️ Group deletion functionality
+- 👥 Group members viewer
+- 🎨 Modern UI with TailwindCSS and Radix UI
+- 📦 State management with Redux Toolkit
+- 🔍 Room search functionality
+- 📎 File upload support
+- ✅ ESLint for code quality
 - 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+
+## New Features Added
+
+### 🎭 Emoji Picker
+
+- Click the smile icon in the message input to open emoji picker
+- Select emojis to add to your messages
+- Auto-close when clicking outside
+
+### �️ Group Management
+
+- Delete/leave groups with confirmation dialog
+- Right-click or use dropdown menu on group items
+- Confirmation prompt prevents accidental deletion
+
+### 👥 Members Viewer
+
+- View all members in a chat group
+- See online/offline status
+- Access via group dropdown menu
+
+### 🔧 ESLint Integration
+
+- Configured with React, TypeScript, and React Router rules
+- Run `npm run lint` to check code quality
+- Run `npm run lint:fix` to auto-fix issues
 
 ## Getting Started
 
@@ -33,6 +65,20 @@ npm run dev
 ```
 
 Your application will be available at `http://localhost:5173`.
+
+### Code Quality
+
+Check code quality with ESLint:
+
+```bash
+npm run lint
+```
+
+Auto-fix ESLint issues:
+
+```bash
+npm run lint:fix
+```
 
 ## Building for Production
 

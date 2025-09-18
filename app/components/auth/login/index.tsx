@@ -1,3 +1,5 @@
+import { auth } from 'config/firebase'
+import { signInWithEmailAndPassword } from 'firebase/auth'
 import { MoveLeft } from 'lucide-react'
 import React, { useState } from 'react'
 import { Link, useNavigate } from "react-router"
@@ -5,8 +7,13 @@ import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/card"
 import { Input } from "~/components/ui/input"
 import { Label } from "~/components/ui/label"
+import { useAppSelector, useAppDispatch } from 'store/hooks'
+import { setUser } from 'store/features/slice/useSlice'
 
 function Login() {
+
+	const user = useAppSelector((state) => state.user)
+	const dispatch = useAppDispatch()
 
 	const [email, setEmail] = useState("")
 	const [password, setPassword] = useState("")
@@ -15,6 +22,22 @@ function Login() {
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
+		setIsLoading(true)
+		try {
+			const response = await signInWithEmailAndPassword(auth, email, password)
+			console.log('User logged in successfully', response)
+			dispatch(setUser({
+				uid: response.user.uid,
+				displayName: response.user.displayName || '',
+				email: response.user.email || ''
+			}))
+			navigate("/chat")
+		} catch (error) {
+			alert("Login failed: " + (error as any).message)
+			return
+		} finally {
+			setIsLoading(false)
+		}
 	}
 	return (
 		<div className="max-h-full bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">

@@ -9,7 +9,9 @@ import {
 
 import type { Route } from "./+types/root";
 import "./app.css";
-import { UserProvider } from "./lib/userContext";
+import { UserProvider } from "../lib/userContext";
+import { Provider } from "react-redux";
+import { store } from "store/store";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -34,11 +36,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <UserProvider>
+        <Provider store={store}>
           {children}
           <ScrollRestoration />
           <Scripts />
-        </UserProvider>
+        </Provider>
       </body>
     </html>
   );

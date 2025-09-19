@@ -5,7 +5,7 @@ import type React from "react"
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
 import { createRoomRef, pushMessage, roomMessagesRef, roomsRef } from "config/firebase"
 import { off, onValue } from "firebase/database"
-import { SquarePen, Send, Search, Users, LogOut, User, Paperclip, Smile, Trash2, UserCheck } from "lucide-react"
+import { SquarePen, Send, Search, Users, LogOut, User, Paperclip, Smile, Trash2, UserCheck, Image, Video, File } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router"
 import EmojiPicker from 'emoji-picker-react'
@@ -37,6 +37,7 @@ interface Message {
 	type?: "text" | "file"
 	fileUrl?: string
 	fileName?: string
+	fileType?: string // Add file type for better rendering
 }
 
 interface ChatRoom {
@@ -202,19 +203,25 @@ export default function Chat() {
 		}
 	}
 
-	const handleFileUpload = async (fileUrl: string) => {
+	const handleFileUpload = async (fileUrl: string, fileName: string, fileType: string) => {
 		if (!selectedChat) return
 
 		try {
-			const fileName = fileUrl.split("/").pop() || "file"
+			// Create appropriate message based on file type
+			let messageText = `📎 ${fileName}`
+			if (fileType === 'image') messageText = `🖼️ Image: ${fileName}`
+			else if (fileType === 'video') messageText = `🎥 Video: ${fileName}`
+			else if (fileType === 'document') messageText = `📄 Document: ${fileName}`
+
 			await pushMessage(selectedChat, {
-				text: `Đã chia sẻ file: ${fileName}`,
+				text: messageText,
 				sender: user?.displayName || user?.uid || "Anonymous",
 				timestamp: Date.now(),
 				isOwn: true,
 				type: "file",
 				fileUrl,
 				fileName,
+				fileType, // Add file type to message
 			})
 			setShowFileUpload(false)
 		} catch (error) {
@@ -531,19 +538,41 @@ export default function Chat() {
 														}`}
 												>
 													{msg.type === "file" ? (
-														<div className="space-y-2">
+														<div className="space-y-2 max-w-xs">
+															{/* Image Preview */}
+															{msg.fileType === 'image' && msg.fileUrl && (
+																<div className="rounded-lg overflow-hidden border bg-muted/30">
+																	<img
+																		src={msg.fileUrl}
+																		alt={msg.fileName || "Image"}
+																		className="w-full max-w-48 h-auto object-cover cursor-pointer hover:opacity-90 transition-opacity"
+																		onClick={() => window.open(msg.fileUrl, '_blank')}
+																	/>
+																</div>
+															)}
+
+															{/* File Info */}
 															<div className="flex items-center space-x-2">
-																<Paperclip className="h-4 w-4" />
-																<span className="text-sm font-medium">{msg.fileName}</span>
+																{msg.fileType === 'image' && <Image className="h-4 w-4 text-blue-500" />}
+																{msg.fileType === 'video' && <Video className="h-4 w-4 text-purple-500" />}
+																{(!msg.fileType || msg.fileType === 'other' || msg.fileType === 'document') && <File className="h-4 w-4 text-gray-500" />}
+																<div className="flex-1 min-w-0">
+																	<span className="text-sm font-medium truncate block">{msg.fileName}</span>
+																	{msg.fileType && (
+																		<span className="text-xs opacity-70 capitalize">{msg.fileType}</span>
+																	)}
+																</div>
 															</div>
+
+															{/* Download Link */}
 															{msg.fileUrl && (
 																<a
 																	href={msg.fileUrl}
 																	target="_blank"
 																	rel="noopener noreferrer"
-																	className="text-xs underline opacity-80 hover:opacity-100"
+																	className="inline-flex items-center text-xs underline opacity-80 hover:opacity-100 transition-opacity"
 																>
-																	Tải xuống
+																	{msg.fileType === 'image' ? 'View original' : 'Download'}
 																</a>
 															)}
 														</div>

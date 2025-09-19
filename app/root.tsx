@@ -7,11 +7,12 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { Provider } from "react-redux";
+import { ToastContainer } from 'react-toastify';
+import { store } from "store/store";
 import type { Route } from "./+types/root";
 import "./app.css";
-import { UserProvider } from "../lib/userContext";
-import { Provider } from "react-redux";
-import { store } from "store/store";
+import { ClientOnlyPersistGate } from "./components/ClientOnlyPersistGate";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -37,9 +38,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <Provider store={store}>
-          {children}
+          <ClientOnlyPersistGate>
+            {children}
+          </ClientOnlyPersistGate>
           <ScrollRestoration />
           <Scripts />
+          <ToastContainer />
         </Provider>
       </body>
     </html>

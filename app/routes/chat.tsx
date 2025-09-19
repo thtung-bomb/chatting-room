@@ -24,6 +24,7 @@ import {
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { FileUpload } from "~/components/file-upload"
+import { useLogout } from "~/hooks/useAuthState"
 
 import { useAppSelector, useAppDispatch } from 'store/hooks'
 import { logout, selectUser } from "store/features/slice/useSlice"
@@ -76,6 +77,7 @@ export default function Chat() {
 	const user = useAppSelector(selectUser)
 	const [senderInfo, setSenderInfo] = useState<Record<string, SenderInfo>>({})
 	const dispatch = useAppDispatch()
+	const { handleLogout, isLoggingOut } = useLogout()
 
 	// Check if user is authenticated
 	useEffect(() => {
@@ -244,10 +246,11 @@ export default function Chat() {
 		}
 	}
 
-	const handleLogout = () => {
-		logout()
-		navigate("/")
-	}
+	// ✅ Now using proper logout hook instead of manual implementation
+	// const handleLogout = () => {
+	// 	logout()
+	// 	navigate("/")
+	// }
 
 	const handleEmojiClick = (emojiData: EmojiClickData) => {
 		setMessage(prev => prev + emojiData.emoji)
@@ -347,9 +350,13 @@ export default function Chat() {
 								</Button>
 							</DropdownMenuTrigger>
 							<DropdownMenuContent align="end" className="w-56">
-								<DropdownMenuItem onClick={handleLogout} className="text-destructive">
+								<DropdownMenuItem
+									onClick={handleLogout}
+									className="text-destructive"
+									disabled={isLoggingOut}
+								>
 									<LogOut className="h-4 w-4 mr-2" />
-									Đăng xuất
+									{isLoggingOut ? "Logging out..." : "Log out"}
 								</DropdownMenuItem>
 							</DropdownMenuContent>
 						</DropdownMenu>

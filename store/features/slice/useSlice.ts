@@ -30,9 +30,13 @@ export const userSlice = createSlice({
 			return state
 		},
 		logout: (state) => {
+			// ✅ CORRECT: Only update Redux state here
 			state.uid = null
 			state.displayName = null
 			state.email = null
+
+			// ❌ DON'T do localStorage operations in reducers
+			// Redux Persist will handle storage automatically
 		}
 	}
 })

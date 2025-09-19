@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useAppSelector } from 'store/hooks'
+import { useNavigate } from 'react-router'
+import { signOut } from 'firebase/auth'
+import { useAppSelector, useAppDispatch } from 'store/hooks'
+import { logout } from 'store/features/slice/useSlice'
+import { auth } from 'config/firebase'
+import { persistor } from 'store/store'
+import { toast } from 'react-toastify'
 
 // Custom hook to check if Redux Persist has finished hydrating
 export function useIsHydrated() {
@@ -29,5 +35,40 @@ export function useAuthenticatedUser() {
 		user: isHydrated ? user : null,
 		isLoading: !isHydrated,
 		isHydrated
+	}
+}
+
+// Hook to handle logout properly with Redux Persist
+export function useLogout() {
+	const dispatch = useAppDispatch()
+	const navigate = useNavigate()
+	const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+	const handleLogout = async () => {
+		try {
+			setIsLoggingOut(true)
+
+			// Step 1: Sign out from Firebase Auth
+			await signOut(auth)
+
+			// Step 2: Clear Redux state (this will trigger Redux Persist to clear localStorage)
+			dispatch(logout())
+
+			// Step 3: Purge Redux Persist storage completely (optional but recommended)
+			if (persistor) {
+				await persistor.purge()
+			}
+			// Step 5: Navigate to login page
+			navigate('/login')
+		} catch (error) {
+			toast.error('Logout failed: ' + (error as any).message)
+		} finally {
+			setIsLoggingOut(false)
+		}
+	}
+
+	return {
+		handleLogout,
+		isLoggingOut
 	}
 }

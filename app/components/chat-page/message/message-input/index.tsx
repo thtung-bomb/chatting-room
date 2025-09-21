@@ -3,6 +3,8 @@ import { Paperclip, Send, Smile } from 'lucide-react'
 import React from 'react'
 import { Button } from '~/components/ui/button'
 import { Input } from '~/components/ui/input'
+import { useResponsive } from '~/hooks/useResponsive'
+import { cn } from 'lib/utils'
 
 interface MessageInputProps {
 	message: string
@@ -29,16 +31,36 @@ function MessageInput({
 	setShowFileUpload,
 	handleEmojiClick
 }: MessageInputProps) {
+	const { isMobile, isTablet, isDesktop } = useResponsive()
+
 	return (
-		<div className="p-4 border-t border-border bg-card">
-			<form onSubmit={handleSendMessage} className="flex space-x-2">
-				<div className="flex space-x-1">
+		<div className={cn(
+			"border-t border-border bg-card",
+			// Mobile: More padding on sides, less on top/bottom
+			isMobile ? "p-3" : "p-4",
+			// Safe area for mobile keyboards
+			isMobile && "pb-safe-bottom"
+		)}>
+			<form onSubmit={handleSendMessage} className={cn(
+				"flex items-end",
+				// Mobile: Closer spacing
+				isMobile ? "space-x-1" : "space-x-2"
+			)}>
+				<div className={cn(
+					"flex",
+					// Mobile: Vertical button layout for better touch
+					isMobile ? "flex-col space-y-1" : "space-x-1"
+				)}>
 					<Button
 						type="button"
 						variant="ghost"
-						size="sm"
+						size={isMobile ? "sm" : "sm"}
 						onClick={() => setShowFileUpload(!showFileUpload)}
-						className="p-2 hover:bg-muted"
+						className={cn(
+							"hover:bg-muted",
+							// Mobile: Bigger touch targets
+							isMobile ? "p-3 h-9 w-9" : "p-2"
+						)}
 					>
 						<Paperclip className="h-4 w-4" />
 					</Button>
@@ -46,15 +68,29 @@ function MessageInput({
 						<Button
 							type="button"
 							variant="ghost"
-							size="sm"
+							size={isMobile ? "sm" : "sm"}
 							onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-							className="p-2 hover:bg-muted"
+							className={cn(
+								"hover:bg-muted",
+								// Mobile: Bigger touch targets
+								isMobile ? "p-3 h-9 w-9" : "p-2"
+							)}
 						>
 							<Smile className="h-4 w-4" />
 						</Button>
 						{showEmojiPicker && (
-							<div className="absolute bottom-12 left-0 z-50">
-								<EmojiPicker onEmojiClick={handleEmojiClick} />
+							<div className={cn(
+								"absolute z-50",
+								// Mobile: Better positioning for emoji picker
+								isMobile
+									? "bottom-12 right-0 transform -translate-x-1/2"
+									: "bottom-12 left-0"
+							)}>
+								<EmojiPicker
+									onEmojiClick={handleEmojiClick}
+									width={isMobile ? 280 : 320}
+									height={isMobile ? 350 : 400}
+								/>
 							</div>
 						)}
 					</div>
@@ -63,16 +99,31 @@ function MessageInput({
 					value={message}
 					onChange={(e) => setMessage(e.target.value)}
 					placeholder={currentRoom ? `Nhập tin nhắn tới ${currentRoom.name}...` : "Chọn phòng chat để bắt đầu..."}
-					className="flex-1 rounded-full border-input focus:ring-2 focus:ring-ring"
+					className={cn(
+						"flex-1 border-input focus:ring-2 focus:ring-ring",
+						// Mobile: Larger input with better touch target
+						isMobile
+							? "rounded-2xl h-10 text-base"
+							: "rounded-full"
+					)}
 					disabled={!selectedChat}
 				/>
 				<Button
 					type="submit"
-					size="sm"
-					className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-4 transition-all duration-200 hover:scale-105"
+					size={isMobile ? "default" : "sm"}
+					className={cn(
+						"bg-primary hover:bg-primary/90 text-primary-foreground transition-all duration-200 hover:scale-105",
+						// Mobile: Larger send button, less rounded
+						isMobile
+							? "rounded-2xl px-4 py-2 h-10 min-w-[60px]"
+							: "rounded-full px-4"
+					)}
 					disabled={!message.trim() || !selectedChat}
 				>
 					<Send className="h-4 w-4" />
+					{isMobile && message.trim() && (
+						<span className="ml-2 text-sm font-medium">Send</span>
+					)}
 				</Button>
 			</form>
 		</div>

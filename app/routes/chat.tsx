@@ -1,13 +1,15 @@
 import { pushMessage, roomMessagesRef, roomsRef } from "config/firebase"
 import type { EmojiClickData } from 'emoji-picker-react'
 import { off, onValue } from "firebase/database"
+import { cn } from "lib/utils"
+import { Menu, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
-import { useLogout } from "~/hooks/useAuthState"
-import { selectUser, type UserState } from "store/features/slice/useSlice"
+import { selectUser } from "store/features/slice/useSlice"
 import { useAppSelector } from 'store/hooks'
 import type { ChatRoom, Message, SenderInfo } from "types/Chat"
 import { getUserByUid } from "util/db"
+import { scrollToBottom } from "util/helper"
 import CreateRoomDialog from "~/components/chat-page/dialog/create-room"
 import ChatHeader from "~/components/chat-page/message/header"
 import MainMessage from "~/components/chat-page/message/main-message"
@@ -16,7 +18,9 @@ import ShowFileUpload from "~/components/chat-page/message/show-file-upload"
 import TypingIndicator from "~/components/chat-page/message/typing-indicator"
 import NotYetMessage from "~/components/chat-page/not-yet-message"
 import Sidebar from "~/components/chat-page/sidebar"
-import { scrollToBottom } from "util/helper"
+import { Button } from "~/components/ui/button"
+import { useLogout } from "~/hooks/useAuthState"
+import { useResponsive } from "~/hooks/useResponsive"
 
 export default function Chat() {
 	const [message, setMessage] = useState("")
@@ -31,10 +35,14 @@ export default function Chat() {
 	const [isTyping, setIsTyping] = useState(false)
 	const [showFileUpload, setShowFileUpload] = useState(false)
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+	const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 	const navigate = useNavigate()
 	const user = useAppSelector(selectUser)
 	const [senderInfo, setSenderInfo] = useState<Record<string, SenderInfo>>({})
 	const { handleLogout, isLoggingOut } = useLogout()
+	const { isMobile, isTablet, isDesktop } = useResponsive()
+
+	console.log('Chat Debug:', { isMobile, isTablet, isDesktop, isSidebarOpen })
 
 	// Check if user is authenticated
 	useEffect(() => {
@@ -228,17 +236,56 @@ export default function Chat() {
 	}
 
 	return (
-		<div className="h-screen flex bg-background">
+		<div className="h-screen flex bg-background relative touch-device">
+			{/* Mobile Navigation Bar */}
+			{isMobile && (
+				<div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border lg:hidden pt-safe">
+					<div className="flex items-center justify-between p-4 tap-target">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => setIsSidebarOpen(true)}
+							className="p-2 tap-target touch-feedback"
+						>
+							<Menu className="h-5 w-5" />
+						</Button>
+						<h1 className="text-lg font-semibold text-foreground truncate max-w-screen">
+							{currentRoom?.name || "Chat"}
+						</h1>
+						<div className="w-9" /> {/* Spacer for centering */}
+					</div>
+				</div>
+			)}
+
 			{/* Sidebar */}
-			<Sidebar user={user} chatRooms={chatRooms} selectedChat={selectedChat} setSelectedChat={setSelectedChat} handleCreateRoom={handleCreateRoom} handleLogout={handleLogout} isLoggingOut={isLoggingOut} handleSearchRoom={handleSearchRoom} searchRoom={searchRoom} />
+			<Sidebar
+				user={user}
+				chatRooms={chatRooms}
+				selectedChat={selectedChat}
+				setSelectedChat={setSelectedChat}
+				handleCreateRoom={handleCreateRoom}
+				handleLogout={handleLogout}
+				isLoggingOut={isLoggingOut}
+				handleSearchRoom={handleSearchRoom}
+				searchRoom={searchRoom}
+				isOpen={isSidebarOpen}
+				onClose={() => setIsSidebarOpen(false)}
+			/>
+
 			{/* Main Chat Area */}
 			{currentRoom && (
-				<div className="flex-1 flex flex-col">
+				<div className={cn(
+					"flex-1 flex flex-col max-w-screen-mobile overflow-hidden",
+					// Add top padding on mobile for navigation bar
+					isMobile && "pt-16"
+				)}>
 					{/* Chat Header */}
-					<ChatHeader currentRoom={currentRoom} />
+					{!isMobile && (
+						<ChatHeader currentRoom={currentRoom} />
+					)}
 
 					{/* Messages */}
-					<div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/20">
+					<div className="flex-1 p-4 space-y-4 overflow-y-auto scroll bg-muted/20 smooth-scroll hide-scrollbar">
 						{messages.length === 0 ? (
 							<NotYetMessage currentRoom={currentRoom} />
 						) : (
@@ -277,7 +324,13 @@ export default function Chat() {
 			)}
 
 			{/* Create Room Dialog */}
-			<CreateRoomDialog openDialog={openDialog} setOpenDialog={setOpenDialog} setSelectedChat={setSelectedChat} roomName={roomName} setRoomName={setRoomName} />
+			<CreateRoomDialog
+				openDialog={openDialog}
+				setOpenDialog={setOpenDialog}
+				setSelectedChat={setSelectedChat}
+				roomName={roomName}
+				setRoomName={setRoomName}
+			/>
 		</div>
 	)
 }

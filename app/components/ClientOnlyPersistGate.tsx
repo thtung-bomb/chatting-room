@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { PersistGate } from 'redux-persist/integration/react'
+import { PersistGate } from 'redux-persist/lib/integration/react'
 import { persistor } from 'store/store'
 
 interface ClientOnlyPersistGateProps {

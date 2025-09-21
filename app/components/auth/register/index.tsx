@@ -46,14 +46,12 @@ export default function RegisterPage() {
 
 	return (
 		<div className="">
-			<Card className="w-full max-w-md p-8 space-y-6">
+			<Card className="w-full max-w-md px-8 space-y-6">
 				<div className="text-center space-y-2">
 					<h1 className="text-2xl font-bold text-foreground font-[Space_Grotesk]">Register</h1>
-					<p className="text-muted-foreground">Please enter your information to access your account</p>
+					<p className="text-muted-foreground">Please enter your information to create your account</p>
 				</div>
 				<form onSubmit={handleRegister} className="space-y-4">
-					<Label htmlFor="displayName">Your Name</Label>
-					<Input type="text" id="displayName" placeholder="Your name" />
 					<Label htmlFor="email">Email</Label>
 					<Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" required />
 					<Label htmlFor="password">Password</Label>
@@ -62,7 +60,7 @@ export default function RegisterPage() {
 					<Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password" required />
 					<Button type="submit" className="w-full hover:bg-secondary/90 hover:text-black cursor-pointer" disabled={isLoading}>{isLoading ? "Registering..." : "Register"}</Button>
 				</form>
-				<div className="text-center text-gray-700">
+				<div className="text-center text-gray-700 hover:underline">
 					<Link to="/login">Already have an account? Sign in</Link>
 				</div>
 			</Card>

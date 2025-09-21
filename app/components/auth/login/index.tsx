@@ -60,43 +60,39 @@ function Login() {
 			<div className="min-h-screen flex items-center justify-center bg-background">
 				<div className="text-center space-y-4">
 					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-					<p className="text-muted-foreground">Loading session...</p>
+					{/* <p className="text-muted-foreground">Loading session...</p> */}
 				</div>
 			</div>
 		)
 	}
 	return (
-		<div className="max-h-full bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-			<Card className="w-full max-w-md p-8 space-y-6">
+		<div className="font-sans">
+			<Card className="w-full max-w-md px-8 space-y-6">
 				<div className="text-center space-y-2">
 					<h1 className="text-2xl font-bold text-foreground font-[Space_Grotesk]">Login</h1>
-					<p className="text-muted-foreground w-full">Please enter your information <br /> to access your account</p>
+					<p className="text-muted-foreground w-full">Please enter your information to access your account</p>
 				</div>
 
 				<form onSubmit={handleSubmit} className="space-y-4">
-					<div className="space-y-2">
-						<Label htmlFor="email">Email</Label>
-						<Input
-							id="email"
-							type="email"
-							placeholder="your@email.com"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							required
-						/>
-					</div>
+					<Label htmlFor="email">Email</Label>
+					<Input
+						id="email"
+						type="email"
+						placeholder="your@email.com"
+						value={email}
+						onChange={(e) => setEmail(e.target.value)}
+						required
+					/>
 
-					<div className="space-y-2">
-						<Label htmlFor="password">Password</Label>
-						<Input
-							id="password"
-							type="password"
-							placeholder="Your password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							required
-						/>
-					</div>
+					<Label htmlFor="password">Password</Label>
+					<Input
+						id="password"
+						type="password"
+						placeholder="Your password"
+						value={password}
+						onChange={(e) => setPassword(e.target.value)}
+						required
+					/>
 
 					<Button
 						type="submit"
@@ -112,15 +108,8 @@ function Login() {
 						Don't have an account? Register
 					</Link>
 				</div>
-
-				<div className="text-gray-700 text-center">
-					<Link to="/" className="flex justify-center align-center items-center gap-2 text-sm text-accent-foreground hover:underline">
-						<MoveLeft className="inline-block mr-1" size={16} />
-						Back to home
-					</Link>
-				</div>
 			</Card>
-		</div>
+		</div >
 	)
 }
 

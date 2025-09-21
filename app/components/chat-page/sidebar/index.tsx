@@ -127,11 +127,11 @@ function Sidebar({
 						</DropdownMenu>
 
 						{/* Logo/Title */}
-						<Link to="/" className="hover:opacity-80 transition-opacity">
-							<h1 className="text-xl font-bold text-sidebar-foreground font-[Space_Grotesk]">
+						<div className="hover:opacity-80 transition-opacity">
+							<h1 className="text-xl font-bold text-sidebar-foreground font-serif">
 								Dudaji Chat
 							</h1>
-						</Link>
+						</div>
 
 						{/* Create Room Button */}
 						<Tooltip>

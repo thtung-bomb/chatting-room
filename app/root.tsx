@@ -13,6 +13,7 @@ import { store } from "store/store";
 import type { Route } from "./+types/root";
 import "./app.css";
 import { ClientOnlyPersistGate } from "./components/ClientOnlyPersistGate";
+import { Toaster } from "sonner";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -45,7 +46,7 @@ export const links: Route.LinksFunction = () => [
           </ClientOnlyPersistGate>
           <ScrollRestoration />
           <Scripts />
-          <ToastContainer />
+          <Toaster />
         </Provider>
       </body>
     </html>

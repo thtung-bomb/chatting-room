@@ -10,7 +10,7 @@ import { Label } from "~/components/ui/label"
 import { useAppSelector, useAppDispatch } from 'store/hooks'
 import { setUser } from 'store/features/slice/useSlice'
 import { useAuthenticatedUser } from '~/hooks/useAuthState'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 function Login() {
 	const dispatch = useAppDispatch()
@@ -46,9 +46,15 @@ function Login() {
 			// Navigate to chat - Redux Persist will save this automatically
 			console.log('✅ Navigating to chat...')
 			navigate("/chat")
-			toast.success("Logged in successfully!")
+			toast.success("Logged in successfully!", {
+				richColors: true,
+				position: "top-center"
+			})
 		} catch (error) {
-			toast.error("Login failed: " + (error as any).message)
+			toast.error("Login failed: " + (error as any).message, {
+				richColors: true,
+				position: "bottom-center"
+			})
 		} finally {
 			setIsLoading(false)
 		}

@@ -3,12 +3,12 @@ import { auth } from "config/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
+import { toast } from "react-toastify";
+import { saveUserToDB } from "util/db";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
-import { setDoc, doc, collection } from "firebase/firestore"
-import { saveUserToDB } from "util/db";
 
 
 export default function RegisterPage() {
@@ -21,7 +21,7 @@ export default function RegisterPage() {
 	const handleRegister = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (password !== confirmPassword) {
-			alert("Mật khẩu không khớp!");
+			toast.error("Passwords do not match!");
 			return;
 		}
 
@@ -33,12 +33,12 @@ export default function RegisterPage() {
 			console.log('User registered successfully', user);
 			console.log('====================================');
 			if (user) {
-				alert("Đăng ký thành công!");
+				toast.success("Registration successful!");
 				saveUserToDB(user.user);
-				navigate("/chat"); // redirect sau khi đăng ký
+				navigate("/chat"); // redirect after registration
 			}
 		} catch (err: any) {
-			alert("Đăng ký thất bại: " + err.message);
+			toast.error("Registration failed: " + err.message);
 		} finally {
 			setIsLoading(false);
 		}

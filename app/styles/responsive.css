@@ -1,0 +1,121 @@
+/* Mobile-first responsive utilities */
+/* Safe area support for mobile devices */
+:root {
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+}
+
+/* Viewport height utilities for mobile */
+.min-h-screen-mobile {
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+.h-screen-mobile {
+  height: 100vh;
+  height: -webkit-fill-available;
+}
+
+/* Safe area utilities */
+.pt-safe {
+  padding-top: var(--safe-area-inset-top);
+}
+
+.pb-safe {
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+.pl-safe {
+  padding-left: var(--safe-area-inset-left);
+}
+
+.pr-safe {
+  padding-right: var(--safe-area-inset-right);
+}
+
+.pb-safe-bottom {
+  padding-bottom: max(var(--safe-area-inset-bottom), 1rem);
+}
+
+/* Touch-friendly tap targets */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Smooth scrolling for better mobile UX */
+.smooth-scroll {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* Hide scrollbars on mobile for cleaner look */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile-optimized transitions */
+@media (max-width: 768px) {
+  * {
+    transition-duration: 200ms !important;
+  }
+
+  /* Reduce animations for better performance on mobile */
+  .animate-in,
+  .animate-out {
+    transition-duration: 150ms !important;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media screen and (max-height: 500px) and (orientation: landscape) {
+  .mobile-landscape-hide {
+    display: none !important;
+  }
+
+  .mobile-landscape-compact {
+    padding: 0.5rem !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* High DPI display optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .crisp-edges {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+}
+
+/* Focus states for keyboard navigation */
+@media (hover: hover) and (pointer: fine) {
+  .hover-only:hover {
+    opacity: 0.8;
+  }
+}
+
+/* Touch device specific styles */
+@media (hover: none) and (pointer: coarse) {
+  .touch-device {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .touch-feedback:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}

@@ -36,17 +36,3 @@ export const createRoomRef = (name: string) => push(roomsRef(), { meta: { name, 
 
 /** NOTE: use plural 'users' to match your data example */
 export const usersRef = () => ref(db, "users");
-
-/** Auth wrappers using modular SDK functions (correct usage) */
-export const signIn = (email: string, password: string) => fbSignInWithEmailAndPassword(auth, email, password);
-export const register = (email: string, password: string) => fbCreateUserWithEmailAndPassword(auth, email, password);
-export const logout = () => fbSignOut(auth);
-export const onAuthStateChanged = (cb: (u: any) => void) => fbOnAuthStateChanged(auth, cb);
-
-/** Dev helper: find user in Realtime DB by email (returns the object keyed by uid or null) */
-export async function findUserByEmailInDB(email: string) {
-	const q = query(usersRef(), orderByChild("email"), equalTo(email));
-	const snap = await get(q);
-	if (!snap.exists()) return null;
-	return snap.val(); // returns object like { uid_1: { ... } }
-}

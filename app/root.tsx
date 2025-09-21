@@ -7,9 +7,13 @@ import {
   ScrollRestoration,
 } from "react-router";
 
+import { Provider } from "react-redux";
+import { ToastContainer } from 'react-toastify';
+import { store } from "store/store";
 import type { Route } from "./+types/root";
 import "./app.css";
-import { UserProvider } from "./lib/userContext";
+import { ClientOnlyPersistGate } from "./components/ClientOnlyPersistGate";
+import { Toaster } from "sonner";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -22,9 +26,11 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
   },
-];
-
-export function Layout({ children }: { children: React.ReactNode }) {
+  {
+    rel: "stylesheet",
+    href: "https://cdn.jsdelivr.net/npm/react-toastify@9.1.3/dist/ReactToastify.css"
+  }
+]; export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
@@ -34,11 +40,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <UserProvider>
-          {children}
+        <Provider store={store}>
+          <ClientOnlyPersistGate>
+            {children}
+          </ClientOnlyPersistGate>
           <ScrollRestoration />
           <Scripts />
-        </UserProvider>
+          <Toaster />
+        </Provider>
       </body>
     </html>
   );

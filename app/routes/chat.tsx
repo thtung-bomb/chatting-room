@@ -10,10 +10,12 @@ import { useAppSelector } from 'store/hooks'
 import type { ChatRoom, Message, SenderInfo } from "types/Chat"
 import { getUserByUid } from "util/db"
 import { scrollToBottom } from "util/helper"
+import { RoomMemberManager } from "util/roomMemberManager"
 import CreateRoomDialog from "~/components/chat-page/dialog/create-room"
 import ChatHeader from "~/components/chat-page/message/header"
 import MainMessage from "~/components/chat-page/message/main-message"
 import MessageInput from "~/components/chat-page/message/message-input"
+import MessageSearch from "~/components/chat-page/message/message-search"
 import ShowFileUpload from "~/components/chat-page/message/show-file-upload"
 import TypingIndicator from "~/components/chat-page/message/typing-indicator"
 import NotYetMessage from "~/components/chat-page/not-yet-message"
@@ -21,11 +23,11 @@ import Sidebar from "~/components/chat-page/sidebar"
 import { Button } from "~/components/ui/button"
 import { useLogout } from "~/hooks/useAuthState"
 import { useResponsive } from "~/hooks/useResponsive"
+import { useChatRooms } from "~/hooks/firebase-helper/useChatRooms"
 
 export default function Chat() {
 	const [message, setMessage] = useState("")
 	const [messages, setMessages] = useState<Message[]>([])
-	const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
 	const [originalChatRooms, setOriginalChatRooms] = useState<ChatRoom[]>([])
 	const [openDialog, setOpenDialog] = useState(false)
 	const [selectedChat, setSelectedChat] = useState("1")
@@ -36,11 +38,21 @@ export default function Chat() {
 	const [showFileUpload, setShowFileUpload] = useState(false)
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+	// Message search states
+	const [isSearchOpen, setIsSearchOpen] = useState(false)
+	const [searchQuery, setSearchQuery] = useState('')
+	const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
+
 	const navigate = useNavigate()
 	const user = useAppSelector(selectUser)
 	const [senderInfo, setSenderInfo] = useState<Record<string, SenderInfo>>({})
 	const { handleLogout, isLoggingOut } = useLogout()
 	const { isMobile, isTablet, isDesktop } = useResponsive()
+
+	// Use our new chat rooms hook with real member counts
+	const { chatRooms: allChatRooms, loading: roomsLoading } = useChatRooms()
+	const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
 
 	console.log('Chat Debug:', { isMobile, isTablet, isDesktop, isSidebarOpen })
 
@@ -94,33 +106,31 @@ export default function Chat() {
 		}
 	}, [message])
 
+	// Update chat rooms from hook
 	useEffect(() => {
-		// Listen to rooms
-		const roomsListener = onValue(roomsRef(), (snapshot) => {
-			const data = snapshot.val()
-			if (data) {
-				const rooms: ChatRoom[] = Object.entries(data).map(([id, room]: [string, any]) => ({
-					id,
-					name: room.meta?.name || "Unknown Room",
-					lastMessage: "New message",
-					timestamp: new Date(room.meta?.createdAt || Date.now()),
-					unreadCount: Math.floor(Math.random() * 3), // Random unread count for demo
-					avatar: "/diverse-user-avatars.png",
-					isOnline: Math.random() > 0.3, // Higher chance of being online
-					memberCount: Math.floor(Math.random() * 50) + 2, // Random member count
-				}))
-				setChatRooms(rooms)
-				setOriginalChatRooms(rooms)
-				if (rooms.length > 0 && !selectedChat) {
-					setSelectedChat(rooms[0].id)
+		setChatRooms(allChatRooms)
+		setOriginalChatRooms(allChatRooms)
+
+		// Set first room as selected if none selected
+		if (allChatRooms.length > 0 && !selectedChat) {
+			setSelectedChat(allChatRooms[0].id)
+		}
+	}, [allChatRooms, selectedChat])
+
+	// Set online status when user selects a room they're already a member of
+	useEffect(() => {
+		if (selectedChat && user?.uid) {
+			// Only set online status, don't auto-join
+			RoomMemberManager.setOnlineStatus(selectedChat, user.uid, true)
+
+			// Cleanup on unmount or room change
+			return () => {
+				if (selectedChat && user?.uid) {
+					RoomMemberManager.setOnlineStatus(selectedChat, user.uid, false)
 				}
 			}
-		})
-
-		return () => {
-			off(roomsRef(), "value", roomsListener)
 		}
-	}, [])
+	}, [selectedChat, user?.uid])
 
 	useEffect(() => {
 		if (!selectedChat) return
@@ -212,6 +222,25 @@ export default function Chat() {
 		setShowEmojiPicker(false)
 	}
 
+	// 🔍 Search functions
+	const handleSearchToggle = () => {
+		setIsSearchOpen(!isSearchOpen)
+		if (isSearchOpen) {
+			// Clear search when closing
+			setSearchQuery('')
+			setHighlightedMessageId(null)
+		}
+	}
+
+	const handleSearchResultClick = (messageId: string) => {
+		setHighlightedMessageId(messageId)
+		// Scroll to message
+		const messageElement = document.getElementById(`message-${messageId}`)
+		if (messageElement) {
+			messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		}
+	}
+
 	const currentRoom = originalChatRooms.find((r) => r.id === selectedChat)
 
 	const handleShowSender = async (senderId: string) => {
@@ -230,9 +259,8 @@ export default function Chat() {
 				return userData as SenderInfo
 			}
 		} catch (error) {
-			console.error("Error fetching user by uid:", error)
+			console.error("Error getting user data:", error)
 		}
-		return null
 	}
 
 	return (
@@ -275,22 +303,41 @@ export default function Chat() {
 			{/* Main Chat Area */}
 			{currentRoom && (
 				<div className={cn(
-					"flex-1 flex flex-col max-w-screen-mobile overflow-hidden",
+					"relative flex-1 flex flex-col max-w-screen-mobile overflow-hidden",
 					// Add top padding on mobile for navigation bar
 					isMobile && "pt-16"
 				)}>
 					{/* Chat Header */}
 					{!isMobile && (
-						<ChatHeader currentRoom={currentRoom} />
+						<ChatHeader onSearchToggle={handleSearchToggle} isSearchOpen={isSearchOpen} currentRoom={currentRoom} />
 					)}
 
+					{/* Message Search */}
+					<MessageSearch
+						messages={messages}
+						onSearchResultClick={handleSearchResultClick}
+						onClose={handleSearchToggle}
+						isOpen={isSearchOpen}
+					/>
+
 					{/* Messages */}
-					<div className="flex-1 p-4 space-y-4 overflow-y-auto scroll bg-muted/20 smooth-scroll hide-scrollbar">
+					<div className={cn(
+						"flex-1 p-4 space-y-4 overflow-y-auto scroll bg-muted/20 smooth-scroll hide-scrollbar",
+						isSearchOpen && "pt-20" // Add padding when search is open
+					)}>
 						{messages.length === 0 ? (
 							<NotYetMessage currentRoom={currentRoom} />
 						) : (
 							messages.map((msg, index) => (
-								<MainMessage key={msg.id} msg={msg} index={index} messages={messages} senderInfo={senderInfo} />
+								<MainMessage
+									key={msg.id}
+									msg={msg}
+									index={index}
+									messages={messages}
+									senderInfo={senderInfo}
+									searchQuery={searchQuery}
+									highlightedMessageId={highlightedMessageId}
+								/>
 							))
 						)}
 

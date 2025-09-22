@@ -5,7 +5,7 @@ import { useAppSelector, useAppDispatch } from 'store/hooks'
 import { logout } from 'store/features/slice/useSlice'
 import { auth } from 'config/firebase'
 import { persistor } from 'store/store'
-import { toast } from 'react-toastify'
+import { toast } from 'sonner'
 
 // Custom hook to check if Redux Persist has finished hydrating
 export function useIsHydrated() {
@@ -61,7 +61,7 @@ export function useLogout() {
 			// Step 5: Navigate to login page
 			navigate('/login')
 		} catch (error) {
-			toast.error('Logout failed: ' + (error as any).message)
+			toast.error('Logout failed: ' + (error as any).message, { position: 'top-center', richColors: true })
 		} finally {
 			setIsLoggingOut(false)
 		}

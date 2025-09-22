@@ -1,8 +1,10 @@
 
-import { createRoomRef } from "config/firebase"
 import { Button } from "~/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "~/components/ui/dialog"
 import { Input } from "~/components/ui/input"
+import { RoomMemberManager } from "util/roomMemberManager"
+import { useAppSelector } from "store/hooks"
+import { selectUser } from "store/features/slice/useSlice"
 
 interface CreateRoomDialogProps {
 	openDialog: boolean
@@ -13,17 +15,19 @@ interface CreateRoomDialogProps {
 }
 
 function CreateRoomDialog({ openDialog, setOpenDialog, setSelectedChat, roomName, setRoomName }: CreateRoomDialogProps) {
+	const user = useAppSelector(selectUser)
+
 	return (
 		<Dialog open={openDialog} onOpenChange={setOpenDialog}>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle className="text-center">Tạo phòng chat mới</DialogTitle>
+					<DialogTitle className="text-center">Create new chat room</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4 py-4">
 					<Input
 						value={roomName}
 						onChange={(e) => setRoomName(e.target.value)}
-						placeholder="Nhập tên phòng chat..."
+						placeholder="Enter room name to create chat..."
 						className="w-full focus:ring-2 focus:ring-ring"
 						onKeyDown={(e) => {
 							if (e.key === "Enter" && roomName.trim()) {
@@ -46,10 +50,15 @@ function CreateRoomDialog({ openDialog, setOpenDialog, setSelectedChat, roomName
 					<Button
 						id="create-room-btn"
 						onClick={async () => {
-							if (roomName.trim()) {
+							if (roomName.trim() && user?.uid) {
 								try {
-									const newRoom = await createRoomRef(roomName.trim())
-									setSelectedChat(newRoom.key!)
+									// ✅ Tạo room với RoomMemberManager - người tạo là admin
+									const roomId = await RoomMemberManager.createRoom(roomName.trim(), {
+										uid: user.uid,
+										displayName: user.displayName || undefined,
+										email: user.email || undefined
+									})
+									setSelectedChat(roomId)
 									setRoomName("")
 									setOpenDialog(false)
 								} catch (error) {

@@ -1,5 +1,6 @@
-import { LogOut, Search, SquarePen, Users, X } from 'lucide-react'
+import { LogOut, Search, SquarePen, Users, X, UserPlus, Settings } from 'lucide-react'
 import { Link } from 'react-router'
+import { useState } from 'react'
 import type { UserState } from 'store/features/slice/useSlice'
 import type { ChatRoom } from 'types/Chat'
 import { Avatar } from '~/components/ui/avatar'
@@ -11,6 +12,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip
 import { formatTime } from 'util/helper'
 import { useResponsive } from '~/hooks/useResponsive'
 import { cn } from 'lib/utils'
+import JoinRoomDialog from '~/components/chat-page/dialog/join-room'
+import ManageRequestsDialog from '~/components/chat-page/dialog/manage-requests'
 
 interface SidebarProps {
 	user: UserState
@@ -42,6 +45,7 @@ function Sidebar({
 	className
 }: SidebarProps) {
 	const { isMobile } = useResponsive()
+	const [openJoinDialog, setOpenJoinDialog] = useState(false)
 
 	// Handle room selection with mobile close
 	const handleRoomSelect = (chatId: string) => {
@@ -133,22 +137,41 @@ function Sidebar({
 							</h1>
 						</div>
 
-						{/* Create Room Button */}
-						<Tooltip>
-							<TooltipTrigger asChild>
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={handleCreateRoom}
-									className="hover:bg-sidebar-accent/20 transition-colors bg-transparent"
-								>
-									<SquarePen className="h-4 w-4" />
-								</Button>
-							</TooltipTrigger>
-							<TooltipContent side="bottom" align="center">
-								<p>Create room</p>
-							</TooltipContent>
-						</Tooltip>
+						{/* Action Buttons */}
+						<div className="flex items-center gap-1">
+							{/* Join Room Button */}
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => setOpenJoinDialog(true)}
+										className="hover:bg-sidebar-accent/20 transition-colors bg-transparent"
+									>
+										<UserPlus className="h-4 w-4" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent side="bottom" align="center">
+									<p>Join room</p>
+								</TooltipContent>
+							</Tooltip>
+							{/* Create Room Button */}
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleCreateRoom}
+										className="hover:bg-sidebar-accent/20 transition-colors bg-transparent"
+									>
+										<SquarePen className="h-4 w-4" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent side="bottom" align="center">
+									<p>Create room</p>
+								</TooltipContent>
+							</Tooltip>
+						</div>
 					</div>
 				</div>
 
@@ -204,7 +227,15 @@ function Sidebar({
 										<div className="flex items-center justify-between mt-1">
 											<div className="flex-1 min-w-0">
 												<p className="text-sm text-muted-foreground truncate">{room.lastMessage}</p>
-												<p className="text-xs text-muted-foreground">{room.memberCount} members</p>
+												<div className="flex items-center space-x-2 text-xs text-muted-foreground">
+													<span>{room.memberCount || 0} member{room.memberCount !== 1 ? 's' : ''}</span>
+													{(room as any).onlineCount !== undefined && (
+														<span className="flex items-center">
+															<div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+															{(room as any).onlineCount} online
+														</span>
+													)}
+												</div>
 											</div>
 											{room.unreadCount > 0 && (
 												<Badge className="bg-sidebar-primary text-sidebar-primary-foreground text-xs min-w-[20px] h-5 flex items-center justify-center ml-2">
@@ -219,6 +250,12 @@ function Sidebar({
 					)}
 				</div>
 			</div>
+
+			{/* Dialogs */}
+			<JoinRoomDialog
+				openDialog={openJoinDialog}
+				setOpenDialog={setOpenJoinDialog}
+			/>
 		</>
 	)
 }

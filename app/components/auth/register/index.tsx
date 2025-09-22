@@ -3,7 +3,7 @@ import { auth } from "config/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 import { saveUserToDB } from "util/db";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -21,7 +21,7 @@ export default function RegisterPage() {
 	const handleRegister = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (password !== confirmPassword) {
-			toast.error("Passwords do not match!");
+			toast.error("Passwords do not match!", { position: 'top-center', richColors: true });
 			return;
 		}
 
@@ -33,12 +33,12 @@ export default function RegisterPage() {
 			console.log('User registered successfully', user);
 			console.log('====================================');
 			if (user) {
-				toast.success("Registration successful!");
+				toast.success("Registration successful!", { position: 'top-center', richColors: true });
 				saveUserToDB(user.user);
 				navigate("/chat"); // redirect after registration
 			}
 		} catch (err: any) {
-			toast.error("Registration failed: " + err.message);
+			toast.error("Registration failed: " + err.message, { position: 'top-center', richColors: true });
 		} finally {
 			setIsLoading(false);
 		}

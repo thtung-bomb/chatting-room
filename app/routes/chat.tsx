@@ -1,13 +1,13 @@
-import { pushMessage, roomMessagesRef, roomsRef } from "config/firebase"
+import { db, pushMessage, roomMessagesRef, roomsRef } from "config/firebase"
 import type { EmojiClickData } from 'emoji-picker-react'
-import { off, onValue } from "firebase/database"
+import { off, onValue, ref } from "firebase/database"
 import { cn } from "lib/utils"
-import { Menu, X } from "lucide-react"
+import { Menu, Search, Settings, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { selectUser } from "store/features/slice/useSlice"
 import { useAppSelector } from 'store/hooks'
-import type { ChatRoom, Message, SenderInfo } from "types/Chat"
+import type { ChatRoom, JoinRequest, Message, SenderInfo } from "types/Chat"
 import { getUserByUid } from "util/db"
 import { scrollToBottom } from "util/helper"
 import { RoomMemberManager } from "util/roomMemberManager"
@@ -24,6 +24,8 @@ import { Button } from "~/components/ui/button"
 import { useLogout } from "~/hooks/useAuthState"
 import { useResponsive } from "~/hooks/useResponsive"
 import { useChatRooms } from "~/hooks/firebase-helper/useChatRooms"
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
+import ManageRequestsDialog from "~/components/chat-page/dialog/manage-requests"
 
 export default function Chat() {
 	const [message, setMessage] = useState("")
@@ -54,7 +56,9 @@ export default function Chat() {
 	const { chatRooms: allChatRooms, loading: roomsLoading } = useChatRooms()
 	const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
 
-	console.log('Chat Debug:', { isMobile, isTablet, isDesktop, isSidebarOpen })
+	const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
+
+	const [openManageDialog, setOpenManageDialog] = useState(false)
 
 	// Check if user is authenticated
 	useEffect(() => {
@@ -263,6 +267,36 @@ export default function Chat() {
 		}
 	}
 
+	useEffect(() => {
+		if (!currentRoom || !isAdminOfSelectedRoom()) {
+			setJoinRequests([])
+			return
+		}
+
+		console.log(`Listening to requests for room: ${currentRoom.id}`)
+		const requestsRef = ref(db, `rooms/${currentRoom.id}/joinRequests`)
+		const unsubscribe = onValue(requestsRef, (snapshot) => {
+			if (snapshot.exists()) {
+				const requestsData = snapshot.val()
+				const requests = Object.values(requestsData).filter(
+					(req: any) => req.status === 'pending'
+				) as JoinRequest[]
+				setJoinRequests(requests)
+				console.log(`Found ${requests.length} pending requests`)
+			} else {
+				setJoinRequests([])
+				console.log('No pending requests found')
+			}
+		})
+
+		return () => unsubscribe()
+	}, [currentRoom?.id, user?.uid])
+
+	const isAdminOfSelectedRoom = () => {
+		if (!currentRoom || !user?.uid) return false
+		return currentRoom?.members?.[user.uid]?.role === 'admin'
+	}
+
 	return (
 		<div className="h-screen flex bg-background relative touch-device">
 			{/* Mobile Navigation Bar */}
@@ -281,6 +315,51 @@ export default function Chat() {
 							{currentRoom?.name || "Chat"}
 						</h1>
 						<div className="w-9" /> {/* Spacer for centering */}
+						<div className="flex items-center gap-2">
+							{/* Search Button */}
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant={isSearchOpen ? "default" : "outline"}
+										size="sm"
+										onClick={handleSearchToggle}
+										className="hover:bg-sidebar-accent/20 transition-colors"
+									>
+										<Search className="h-4 w-4" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent side="bottom" align="center">
+									<p>{isSearchOpen ? 'Close search' : 'Search messages'}</p>
+								</TooltipContent>
+							</Tooltip>
+
+							{/* Manage Requests (only for admins) */}
+							{isAdminOfSelectedRoom() && (
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<div className="relative">
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => setOpenManageDialog(true)}
+												className="hover:bg-sidebar-accent/20 transition-colors bg-transparent"
+											>
+												<Settings className="h-4 w-4" />
+											</Button>
+											{/* Red notification badge */}
+											{joinRequests.length > 0 && (
+												<div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-lg animate-pulse">
+													{joinRequests.length > 9 ? '9+' : joinRequests.length}
+												</div>
+											)}
+										</div>
+									</TooltipTrigger>
+									<TooltipContent side="bottom" align="center">
+										<p>Manage requests</p>
+									</TooltipContent>
+								</Tooltip>
+							)}
+						</div>
 					</div>
 				</div>
 			)}
@@ -367,6 +446,12 @@ export default function Chat() {
 						setShowFileUpload={setShowFileUpload}
 						handleEmojiClick={handleEmojiClick}
 					/>
+
+					<ManageRequestsDialog
+						openDialog={openManageDialog}
+						setOpenDialog={setOpenManageDialog}
+						roomId={currentRoom.id}
+					/>
 				</div>
 			)}
 
@@ -378,6 +463,8 @@ export default function Chat() {
 				roomName={roomName}
 				setRoomName={setRoomName}
 			/>
+
+
 		</div>
 	)
 }

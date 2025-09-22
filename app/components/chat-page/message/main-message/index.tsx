@@ -4,6 +4,7 @@ import type { Message } from 'types/Chat'
 import { Avatar } from '~/components/ui/avatar'
 import { formatTime, handleCheckIsOwn } from 'util/helper'
 import { useResponsive } from '~/hooks/useResponsive'
+import { useMessageHighlight } from '~/hooks/useMessageHighlight'
 import { cn } from 'lib/utils'
 
 interface MainMessageProps {
@@ -11,9 +12,11 @@ interface MainMessageProps {
 	messages: Array<Message>
 	senderInfo: Record<string, { email?: string }>
 	msg: Message
+	searchQuery?: string
+	highlightedMessageId?: string | null
 }
 
-function MainMessage({ msg, index, messages, senderInfo }: MainMessageProps) {
+function MainMessage({ msg, index, messages, senderInfo, searchQuery = '', highlightedMessageId }: MainMessageProps) {
 	const user = useAppSelector((state) => state.user)
 	const { isMobile, isTablet } = useResponsive()
 	const showAvatar =
@@ -21,11 +24,21 @@ function MainMessage({ msg, index, messages, senderInfo }: MainMessageProps) {
 	const showSender = !handleCheckIsOwn(msg.sender, user) && showAvatar
 	const isOwn = handleCheckIsOwn(msg.sender, user)
 
+	// Use message highlight hook
+	const { highlightedText, messageClassName } = useMessageHighlight({
+		text: msg.text,
+		searchQuery,
+		isHighlighted: highlightedMessageId === msg.id
+	})
+
 	return (
 		<div key={msg.id} className={cn(
 			"flex",
-			isOwn ? "justify-end" : "justify-start"
-		)}>
+			isOwn ? "justify-end" : "justify-start",
+			messageClassName // Add highlight styling
+		)}
+			id={`message-${msg.id}`} // Add ID for scrolling
+		>
 			<div className={cn(
 				"flex items-end space-x-2",
 				isMobile
@@ -136,9 +149,9 @@ function MainMessage({ msg, index, messages, senderInfo }: MainMessageProps) {
 								"leading-relaxed break-words",
 								// Mobile: Better text sizing and line height
 								isMobile ? "text-sm leading-5" : "text-sm leading-relaxed"
-							)}>
-								{msg.text}
-							</p>
+							)}
+								dangerouslySetInnerHTML={{ __html: highlightedText }} // Use highlighted text
+							/>
 						)}
 						<p className={cn(
 							"opacity-70 mt-1",

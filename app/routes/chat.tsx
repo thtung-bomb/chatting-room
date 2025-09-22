@@ -1,19 +1,21 @@
-import { pushMessage, roomMessagesRef, roomsRef } from "config/firebase"
+import { db, pushMessage, roomMessagesRef, roomsRef } from "config/firebase"
 import type { EmojiClickData } from 'emoji-picker-react'
-import { off, onValue } from "firebase/database"
+import { off, onValue, ref } from "firebase/database"
 import { cn } from "lib/utils"
-import { Menu, X } from "lucide-react"
+import { Menu, Search, Settings, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router"
 import { selectUser } from "store/features/slice/useSlice"
 import { useAppSelector } from 'store/hooks'
-import type { ChatRoom, Message, SenderInfo } from "types/Chat"
+import type { ChatRoom, JoinRequest, Message, SenderInfo } from "types/Chat"
 import { getUserByUid } from "util/db"
 import { scrollToBottom } from "util/helper"
+import { RoomMemberManager } from "util/roomMemberManager"
 import CreateRoomDialog from "~/components/chat-page/dialog/create-room"
 import ChatHeader from "~/components/chat-page/message/header"
 import MainMessage from "~/components/chat-page/message/main-message"
 import MessageInput from "~/components/chat-page/message/message-input"
+import MessageSearch from "~/components/chat-page/message/message-search"
 import ShowFileUpload from "~/components/chat-page/message/show-file-upload"
 import TypingIndicator from "~/components/chat-page/message/typing-indicator"
 import NotYetMessage from "~/components/chat-page/not-yet-message"
@@ -21,11 +23,13 @@ import Sidebar from "~/components/chat-page/sidebar"
 import { Button } from "~/components/ui/button"
 import { useLogout } from "~/hooks/useAuthState"
 import { useResponsive } from "~/hooks/useResponsive"
+import { useChatRooms } from "~/hooks/firebase-helper/useChatRooms"
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip"
+import ManageRequestsDialog from "~/components/chat-page/dialog/manage-requests"
 
 export default function Chat() {
 	const [message, setMessage] = useState("")
 	const [messages, setMessages] = useState<Message[]>([])
-	const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
 	const [originalChatRooms, setOriginalChatRooms] = useState<ChatRoom[]>([])
 	const [openDialog, setOpenDialog] = useState(false)
 	const [selectedChat, setSelectedChat] = useState("1")
@@ -36,13 +40,25 @@ export default function Chat() {
 	const [showFileUpload, setShowFileUpload] = useState(false)
 	const [showEmojiPicker, setShowEmojiPicker] = useState(false)
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+
+	// Message search states
+	const [isSearchOpen, setIsSearchOpen] = useState(false)
+	const [searchQuery, setSearchQuery] = useState('')
+	const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null)
+
 	const navigate = useNavigate()
 	const user = useAppSelector(selectUser)
 	const [senderInfo, setSenderInfo] = useState<Record<string, SenderInfo>>({})
 	const { handleLogout, isLoggingOut } = useLogout()
 	const { isMobile, isTablet, isDesktop } = useResponsive()
 
-	console.log('Chat Debug:', { isMobile, isTablet, isDesktop, isSidebarOpen })
+	// Use our new chat rooms hook with real member counts
+	const { chatRooms: allChatRooms, loading: roomsLoading } = useChatRooms()
+	const [chatRooms, setChatRooms] = useState<ChatRoom[]>([])
+
+	const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
+
+	const [openManageDialog, setOpenManageDialog] = useState(false)
 
 	// Check if user is authenticated
 	useEffect(() => {
@@ -94,33 +110,31 @@ export default function Chat() {
 		}
 	}, [message])
 
+	// Update chat rooms from hook
 	useEffect(() => {
-		// Listen to rooms
-		const roomsListener = onValue(roomsRef(), (snapshot) => {
-			const data = snapshot.val()
-			if (data) {
-				const rooms: ChatRoom[] = Object.entries(data).map(([id, room]: [string, any]) => ({
-					id,
-					name: room.meta?.name || "Unknown Room",
-					lastMessage: "New message",
-					timestamp: new Date(room.meta?.createdAt || Date.now()),
-					unreadCount: Math.floor(Math.random() * 3), // Random unread count for demo
-					avatar: "/diverse-user-avatars.png",
-					isOnline: Math.random() > 0.3, // Higher chance of being online
-					memberCount: Math.floor(Math.random() * 50) + 2, // Random member count
-				}))
-				setChatRooms(rooms)
-				setOriginalChatRooms(rooms)
-				if (rooms.length > 0 && !selectedChat) {
-					setSelectedChat(rooms[0].id)
+		setChatRooms(allChatRooms)
+		setOriginalChatRooms(allChatRooms)
+
+		// Set first room as selected if none selected
+		if (allChatRooms.length > 0 && !selectedChat) {
+			setSelectedChat(allChatRooms[0].id)
+		}
+	}, [allChatRooms, selectedChat])
+
+	// Set online status when user selects a room they're already a member of
+	useEffect(() => {
+		if (selectedChat && user?.uid) {
+			// Only set online status, don't auto-join
+			RoomMemberManager.setOnlineStatus(selectedChat, user.uid, true)
+
+			// Cleanup on unmount or room change
+			return () => {
+				if (selectedChat && user?.uid) {
+					RoomMemberManager.setOnlineStatus(selectedChat, user.uid, false)
 				}
 			}
-		})
-
-		return () => {
-			off(roomsRef(), "value", roomsListener)
 		}
-	}, [])
+	}, [selectedChat, user?.uid])
 
 	useEffect(() => {
 		if (!selectedChat) return
@@ -212,6 +226,25 @@ export default function Chat() {
 		setShowEmojiPicker(false)
 	}
 
+	// 🔍 Search functions
+	const handleSearchToggle = () => {
+		setIsSearchOpen(!isSearchOpen)
+		if (isSearchOpen) {
+			// Clear search when closing
+			setSearchQuery('')
+			setHighlightedMessageId(null)
+		}
+	}
+
+	const handleSearchResultClick = (messageId: string) => {
+		setHighlightedMessageId(messageId)
+		// Scroll to message
+		const messageElement = document.getElementById(`message-${messageId}`)
+		if (messageElement) {
+			messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+		}
+	}
+
 	const currentRoom = originalChatRooms.find((r) => r.id === selectedChat)
 
 	const handleShowSender = async (senderId: string) => {
@@ -230,9 +263,38 @@ export default function Chat() {
 				return userData as SenderInfo
 			}
 		} catch (error) {
-			console.error("Error fetching user by uid:", error)
+			console.error("Error getting user data:", error)
 		}
-		return null
+	}
+
+	useEffect(() => {
+		if (!currentRoom || !isAdminOfSelectedRoom()) {
+			setJoinRequests([])
+			return
+		}
+
+		console.log(`Listening to requests for room: ${currentRoom.id}`)
+		const requestsRef = ref(db, `rooms/${currentRoom.id}/joinRequests`)
+		const unsubscribe = onValue(requestsRef, (snapshot) => {
+			if (snapshot.exists()) {
+				const requestsData = snapshot.val()
+				const requests = Object.values(requestsData).filter(
+					(req: any) => req.status === 'pending'
+				) as JoinRequest[]
+				setJoinRequests(requests)
+				console.log(`Found ${requests.length} pending requests`)
+			} else {
+				setJoinRequests([])
+				console.log('No pending requests found')
+			}
+		})
+
+		return () => unsubscribe()
+	}, [currentRoom?.id, user?.uid])
+
+	const isAdminOfSelectedRoom = () => {
+		if (!currentRoom || !user?.uid) return false
+		return currentRoom?.members?.[user.uid]?.role === 'admin'
 	}
 
 	return (
@@ -253,6 +315,51 @@ export default function Chat() {
 							{currentRoom?.name || "Chat"}
 						</h1>
 						<div className="w-9" /> {/* Spacer for centering */}
+						<div className="flex items-center gap-2">
+							{/* Search Button */}
+							<Tooltip>
+								<TooltipTrigger asChild>
+									<Button
+										variant={isSearchOpen ? "default" : "outline"}
+										size="sm"
+										onClick={handleSearchToggle}
+										className="hover:bg-sidebar-accent/20 transition-colors"
+									>
+										<Search className="h-4 w-4" />
+									</Button>
+								</TooltipTrigger>
+								<TooltipContent side="bottom" align="center">
+									<p>{isSearchOpen ? 'Close search' : 'Search messages'}</p>
+								</TooltipContent>
+							</Tooltip>
+
+							{/* Manage Requests (only for admins) */}
+							{isAdminOfSelectedRoom() && (
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<div className="relative">
+											<Button
+												variant="outline"
+												size="sm"
+												onClick={() => setOpenManageDialog(true)}
+												className="hover:bg-sidebar-accent/20 transition-colors bg-transparent"
+											>
+												<Settings className="h-4 w-4" />
+											</Button>
+											{/* Red notification badge */}
+											{joinRequests.length > 0 && (
+												<div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[16px] h-4 flex items-center justify-center px-1 shadow-lg animate-pulse">
+													{joinRequests.length > 9 ? '9+' : joinRequests.length}
+												</div>
+											)}
+										</div>
+									</TooltipTrigger>
+									<TooltipContent side="bottom" align="center">
+										<p>Manage requests</p>
+									</TooltipContent>
+								</Tooltip>
+							)}
+						</div>
 					</div>
 				</div>
 			)}
@@ -275,22 +382,41 @@ export default function Chat() {
 			{/* Main Chat Area */}
 			{currentRoom && (
 				<div className={cn(
-					"flex-1 flex flex-col max-w-screen-mobile overflow-hidden",
+					"relative flex-1 flex flex-col max-w-screen-mobile overflow-hidden",
 					// Add top padding on mobile for navigation bar
 					isMobile && "pt-16"
 				)}>
 					{/* Chat Header */}
 					{!isMobile && (
-						<ChatHeader currentRoom={currentRoom} />
+						<ChatHeader onSearchToggle={handleSearchToggle} isSearchOpen={isSearchOpen} currentRoom={currentRoom} />
 					)}
 
+					{/* Message Search */}
+					<MessageSearch
+						messages={messages}
+						onSearchResultClick={handleSearchResultClick}
+						onClose={handleSearchToggle}
+						isOpen={isSearchOpen}
+					/>
+
 					{/* Messages */}
-					<div className="flex-1 p-4 space-y-4 overflow-y-auto scroll bg-muted/20 smooth-scroll hide-scrollbar">
+					<div className={cn(
+						"flex-1 p-4 space-y-4 overflow-y-auto scroll bg-muted/20 smooth-scroll hide-scrollbar",
+						isSearchOpen && "pt-20" // Add padding when search is open
+					)}>
 						{messages.length === 0 ? (
 							<NotYetMessage currentRoom={currentRoom} />
 						) : (
 							messages.map((msg, index) => (
-								<MainMessage key={msg.id} msg={msg} index={index} messages={messages} senderInfo={senderInfo} />
+								<MainMessage
+									key={msg.id}
+									msg={msg}
+									index={index}
+									messages={messages}
+									senderInfo={senderInfo}
+									searchQuery={searchQuery}
+									highlightedMessageId={highlightedMessageId}
+								/>
 							))
 						)}
 
@@ -320,6 +446,12 @@ export default function Chat() {
 						setShowFileUpload={setShowFileUpload}
 						handleEmojiClick={handleEmojiClick}
 					/>
+
+					<ManageRequestsDialog
+						openDialog={openManageDialog}
+						setOpenDialog={setOpenManageDialog}
+						roomId={currentRoom.id}
+					/>
 				</div>
 			)}
 
@@ -331,6 +463,8 @@ export default function Chat() {
 				roomName={roomName}
 				setRoomName={setRoomName}
 			/>
+
+
 		</div>
 	)
 }
